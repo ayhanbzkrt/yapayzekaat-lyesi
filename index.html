@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hikaye ve Macera Oyunu</title>
+  <!-- Minecraft tarzı pixel fontu -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    /* Genel Stil - Minecraft Esintisi */
+    body {
+      font-family: 'Press Start 2P', cursive;
+      background: #7a9f7a;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    #container {
+      background: #f1f1f1;
+      border: 4px solid #000;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px auto;
+      width: 90%;
+      max-width: 800px;
+      box-shadow: 0 4px 0 #000;
+      text-align: center;
+    }
+    #languageContainer {
+      text-align: right;
+    }
+    #languageContainer label {
+      margin-right: 10px;
+      font-size: 12px;
+    }
+    h1, h2 {
+      margin: 10px 0;
+    }
+    label {
+      display: block;
+      margin: 15px 0 5px;
+      text-align: left;
+      font-size: 12px;
+    }
+    input[type="number"],
+    input[type="text"],
+    select {
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 10px;
+      border: 2px solid #000;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      background: #48a868;
+      border: 2px solid #000;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    button:active {
+      transform: scale(0.95);
+    }
+    #initialStoryText, #challengeText, #outcomeText, #finalMessage {
+      text-align: left;
+      white-space: pre-wrap;
+      padding: 10px;
+      background: #fff;
+      border: 2px solid #000;
+      border-radius: 4px;
+      font-size: 12px;
+      animation: fadeIn 1s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    footer {
+      text-align: center;
+      font-size: 10px;
+      padding: 5px;
+      margin-top: auto;
+      background: #f1f1f1;
+      border-top: 2px solid #000;
+    }
+    /* Pixelated efekt */
+    * { image-rendering: pixelated; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="languageContainer">
+      <label for="languageSelect">Dil / Language:</label>
+      <select id="languageSelect">
+        <option value="tr">Türkçe</option>
+        <option value="en">English</option>
+      </select>
+      <button id="toggleMusic">Müzik Aç</button>
+    </div>
+    <h1 id="h1Title">Hikaye Oyunu</h1>
+
+    <!-- Oyun Akışı Bölümleri -->
+    <div id="game">
+      <!-- Adım 1: Karakter Sayısı -->
+      <div id="step-1">
+        <label id="step1Label" for="characterCount">Kaç karakter eklemek istiyorsun? (1-5 arası):</label>
+        <input type="number" id="characterCount" min="1" max="5" value="1" />
+        <button id="nextStep">Devam Et</button>
+      </div>
+
+      <!-- Adım 2: Karakter İsimleri ve Tür Seçimi -->
+      <div id="step-2" style="display: none;">
+        <div id="characterInputs"></div>
+        <label id="genreLabel" for="genre">Hikayenin türünü seç:</label>
+        <select id="genre">
+          <option value="fantasy">fantasy</option>
+          <option value="bilim kurgu">bilim kurgu</option>
+          <option value="macera">macera</option>
+          <option value="detektif">detektif</option>
+        </select>
+        <button id="generateButton">Hikayeyi Oluştur</button>
+      </div>
+
+      <!-- İlk Hikaye Bölümü -->
+      <div id="initialStorySection" style="display: none;">
+        <h2 id="initialStoryHeading">Oluşturulan Hikaye</h2>
+        <p id="initialStoryText"></p>
+        <button id="startLevels">Level 1'e Başla</button>
+      </div>
+
+      <!-- Level Challenge Bölümü -->
+      <div id="levelSection" style="display: none;">
+        <h2 id="levelHeading">Level 1</h2>
+        <p id="challengeText"></p>
+        <div id="choicesContainer"></div>
+        <p id="outcomeText" style="display: none; font-weight: bold;"></p>
+        <button id="nextLevelButton" style="display: none;">Sonraki Level</button>
+      </div>
+
+      <!-- Final Bölüm -->
+      <div id="finalSection" style="display: none;">
+        <h2 id="finalHeading"></h2>
+        <p id="finalMessage"></p>
+        <button id="restartGame">Oyuna Yeniden Başla</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    13 Nisan Yapay Zeka Muhafızları Sınıfı Atölyesi hehehe
+  </footer>
+
+  <!-- Ses Efektleri -->
+  <audio id="clickSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
+  <!-- Arka plan müziği (başlangıçta boş, levela göre güncellenecek) -->
+  <audio id="bgMusic" preload="auto" loop></audio>
+
+  <script>
+    // Çok dilli metinler
+    const texts = {
+      tr: {
+        title: "Hikaye Oyunu",
+        step1_label: "Kaç karakter eklemek istiyorsun? (1-5 arası):",
+        step1_button: "Devam Et",
+        characterName: "karakterin adı:",
+        genre_label: "Hikayenin türünü seç:",
+        genre_options: {
+          fantasy: "Fantasy",
+          "bilim kurgu": "Bilim Kurgu",
+          macera: "Macera",
+          detektif: "Detektif"
+        },
+        generate_button: "Hikayeyi Oluştur",
+        initial_story_heading: "Oluşturulan Hikaye",
+        start_levels: "Level 1'e Başla",
+        music_on: "Müzik Aç",
+        music_off: "Müzik Kapat",
+        final_heading: "Macera Tamamlandı",
+        final_message: "Tebrikler, macerayı tamamladın!"
+      },
+      en: {
+        title: "Story Game",
+        step1_label: "How many characters do you want? (1-5):",
+        step1_button: "Next",
+        characterName: "Character name:",
+        genre_label: "Select the story genre:",
+        genre_options: {
+          fantasy: "Fantasy",
+          "bilim kurgu": "Science Fiction",
+          macera: "Adventure",
+          detektif: "Detective"
+        },
+        generate_button: "Generate Story",
+        initial_story_heading: "Generated Story",
+        start_levels: "Start Level 1",
+        music_on: "Play Music",
+        music_off: "Stop Music",
+        final_heading: "Adventure Completed",
+        final_message: "Congratulations, you completed the adventure!"
+      }
+    };
+
+    // Level Challenge nesnesi (3 level örneği)
+    const levels = [
+      {
+        tr: {
+          challenge: "Level 1: Ormanda ilerlerken devasa bir canavarla karşılaştınız! Ne yapacaksın?",
+          choices: [
+            { text: "Savaş", outcome: "Cesaretinle canavarı yendin, ormanın derinliklerine ilerledin." },
+            { text: "Kaç", outcome: "Güvenliğe çekildin ama ormanda saklı sırları kaçırdın." }
+          ]
+        },
+        en: {
+          challenge: "Level 1: While advancing through the forest, you encountered a giant monster! What will you do?",
+          choices: [
+            { text: "Fight", outcome: "With your bravery, you defeated the monster and ventured deeper into the forest." },
+            { text: "Run", outcome: "You retreated to safety, but missed the hidden secrets of the forest." }
+          ]
+        },
+        music: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+      },
+      {
+        tr: {
+          challenge: "Level 2: Eski kaleye ulaştığınızda grubunuz gizemli bir bulmaca ile karşılaştı. Çözebilir misin?",
+          choices: [
+            { text: "Çöz", outcome: "Bulmacayı çözdün ve kalenin derinliklerine inerek sırları açığa çıkardın." },
+            { text: "İlgilenme", outcome: "Bulmacanın peşinden gitmedin, kaleden yüzeysel geçtin." }
+          ]
+        },
+        en: {
+          challenge: "Level 2: Upon reaching the ancient castle, your group encountered a mysterious puzzle. Can you solve it?",
+          choices: [
+            { text: "Solve", outcome: "You solved the puzzle and delved deeper into the castle to uncover its secrets." },
+            { text: "Ignore", outcome: "You chose not to solve the puzzle and merely scratched the surface of the castle." }
+          ]
+        },
+        music: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+      },
+      {
+        tr: {
+          challenge: "Level 3: Son görevde, kötü bir büyücüyle yüzleştin. Karar zamanı!",
+          choices: [
+            { text: "Takım Ol", outcome: "Birleşerek büyücüyü mağlup ettiniz, efsane oldunuz!" },
+            { text: "Yalnız Git", outcome: "Tek başına girmeye cesaret ettin, zorlu mücadeleden galip çıktın." }
+          ]
+        },
+        en: {
+          challenge: "Level 3: In the final task, you faced an evil sorcerer. Time to decide!",
+          choices: [
+            { text: "Team Up", outcome: "Together, you defeated the sorcerer and became legends!" },
+            { text: "Go Alone", outcome: "Bravely, you ventured alone and triumphed over the sorcerer with great difficulty." }
+          ]
+        },
+        music: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+      }
+    ];
+
+    // DOM elemanları
+    const languageSelect = document.getElementById("languageSelect");
+    const h1Title = document.getElementById("h1Title");
+    const step1Label = document.getElementById("step1Label");
+    const nextStepButton = document.getElementById("nextStep");
+    const genreLabel = document.getElementById("genreLabel");
+    const generateButton = document.getElementById("generateButton");
+    const toggleMusicButton = document.getElementById("toggleMusic");
+
+    const characterCountInput = document.getElementById("characterCount");
+    const characterInputsDiv = document.getElementById("characterInputs");
+    const genreSelect = document.getElementById("genre");
+
+    // Bölümlerin seçimi
+    const step1 = document.getElementById("step-1");
+    const step2 = document.getElementById("step-2");
+    const initialStorySection = document.getElementById("initialStorySection");
+    const levelSection = document.getElementById("levelSection");
+    const finalSection = document.getElementById("finalSection");
+
+    // İlk hikaye ve level bölümü DOM elemanları
+    const initialStoryText = document.getElementById("initialStoryText");
+    const startLevelsButton = document.getElementById("startLevels");
+
+    const levelHeading = document.getElementById("levelHeading");
+    const challengeText = document.getElementById("challengeText");
+    const choicesContainer = document.getElementById("choicesContainer");
+    const outcomeText = document.getElementById("outcomeText");
+    const nextLevelButton = document.getElementById("nextLevelButton");
+
+    const finalHeading = document.getElementById("finalHeading");
+    const finalMessage = document.getElementById("finalMessage");
+    const restartGameButton = document.getElementById("restartGame");
+
+    // Ses efektleri
+    const clickSound = document.getElementById("clickSound");
+    const bgMusic = document.getElementById("bgMusic");
+    let bgMusicPlaying = false;
+
+    // Mevcut level index'i
+    let currentLevel = 0;
+
+    // Statik metinleri güncelle
+    function updateStaticTexts() {
+      let lang = languageSelect.value;
+      h1Title.textContent = texts[lang].title;
+      step1Label.textContent = texts[lang].step1_label;
+      nextStepButton.textContent = texts[lang].step1_button;
+      genreLabel.textContent = texts[lang].genre_label;
+      generateButton.textContent = texts[lang].generate_button;
+      startLevelsButton.textContent = texts[lang].start_levels;
+      toggleMusicButton.textContent = bgMusicPlaying ? texts[lang].music_off : texts[lang].music_on;
+      finalHeading.textContent = texts[lang].final_heading;
+      finalMessage.textContent = texts[lang].final_message;
+      // Güncelle: Tür seçeneklerinin görünen metinleri
+      for (let option of genreSelect.options) {
+        option.textContent = texts[lang].genre_options[option.value] || option.value;
+      }
+    }
+    languageSelect.addEventListener("change", updateStaticTexts);
+    updateStaticTexts();
+
+    // Click sesi
+    function playClickSound() {
+      clickSound.currentTime = 0;
+      clickSound.play();
+    }
+
+    // Müzik aç/kapat
+    toggleMusicButton.addEventListener("click", function() {
+      playClickSound();
+      if (!bgMusicPlaying) {
+        bgMusic.play();
+        bgMusicPlaying = true;
+      } else {
+        bgMusic.pause();
+        bgMusicPlaying = false;
+      }
+      updateStaticTexts();
+    });
+
+    // Basit hikaye oluşturma fonksiyonu (level öncesi)
+    function generateStory(characters, genre, lang) {
+      let settings, villains, quests;
+      if (lang === "tr") {
+        if (genre.toLowerCase() === "fantasy") {
+          settings = ["büyülü orman", "eski kaleler", "gizemli dağlar", "sihirli göller"];
+          villains = ["kötü büyücü", "ejderha", "lanetli yaratık"];
+          quests = ["gizemli bir büyüyü bozmak", "kaybolan krallığı bulmak", "laneti kaldırmak"];
+        } else if (genre.toLowerCase() === "bilim kurgu") {
+          settings = ["yüksek teknoloji şehri", "uzay gemileri", "görünmez gezegenler", "geleceğin laboratuvarları"];
+          villains = ["uzay korsanı", "kontrolü ele geçirmiş yapay zeka", "uzaylı istilacı"];
+          quests = ["kaybolan bir teknolojiyi bulmak", "galaksiyi kurtarmak", "zaman yolculuğu yapmak"];
+        } else if (genre.toLowerCase() === "macera") {
+          settings = ["geniş ormanlar", "eski kaleler", "gizemli mağaralar", "uçsuz bucaksız çöller"];
+          villains = ["haydutlar", "yabani hayvanlar", "tuhaf yaratıklar"];
+          quests = ["kaybolan hazineyi bulmak", "eski bir sırrı çözmek", "yeni maceralara atılmak"];
+        } else if (genre.toLowerCase() === "detektif") {
+          settings = ["karanlık sokaklar", "gizemli şehirler", "yağmurlu geceler", "sessiz apartmanlar"];
+          villains = ["zeki suç dehası", "gizemli bir şahsiyet", "kaçak suç örgütü"];
+          quests = ["çözülmemiş bir davayı aydınlatmak", "gizli bir suçun izini sürmek", "esrarengiz olayları ortaya çıkarmak"];
+        } else {
+          settings = ["eski bir kasaba", "modern bir şehir", "sessiz bir köy", "doğa ile iç içe bir yer"];
+          villains = ["bilinmeyen bir tehlike"];
+          quests = ["yeni bir maceraya atılmak"];
+        }
+        return `Bir zamanlar, ${randomElement(settings)} bölgesinde ${characters.join(", ")} adında cesur karakterler yaşardı.
+Bir gün, beklenmedik bir şekilde bölgede ${randomElement(villains)} ortaya çıktı.
+Kahramanlarımız, ${randomElement(quests)} amacıyla uzun ve maceralı bir yolculuğa çıktılar.
+Yol boyunca karşılarına çıkan zorluklar, onları birbirlerine daha da yakınlaştırdı ve
+her biri kendine has yeteneklerini keşfetti.`;
+      } else {
+        if (genre.toLowerCase() === "fantasy") {
+          settings = ["enchanted forest", "ancient castles", "mystical mountains", "magical lakes"];
+          villains = ["evil sorcerer", "dragon", "cursed creature"];
+          quests = ["break a mysterious curse", "find a lost kingdom", "lift the curse"];
+        } else if (genre.toLowerCase() === "bilim kurgu") {
+          settings = ["futuristic city", "space ships", "invisible planets", "laboratories of the future"];
+          villains = ["space pirate", "rogue AI", "alien invader"];
+          quests = ["find a lost technology", "save the galaxy", "time travel"];
+        } else if (genre.toLowerCase() === "macera") {
+          settings = ["vast forests", "old castles", "mysterious caves", "endless deserts"];
+          villains = ["bandits", "wild animals", "strange creatures"];
+          quests = ["find a hidden treasure", "uncover an ancient secret", "embark on a new adventure"];
+        } else if (genre.toLowerCase() === "detektif") {
+          settings = ["dark alleys", "mysterious cities", "rainy nights", "quiet apartments"];
+          villains = ["cunning criminal mastermind", "mysterious figure", "underground crime syndicate"];
+          quests = ["solve an unsolved case", "track down a hidden crime", "uncover mysterious events"];
+        } else {
+          settings = ["old town", "modern city", "quiet village", "nature-surrounded place"];
+          villains = ["an unknown threat"];
+          quests = ["embark on a new adventure"];
+        }
+        return `Once upon a time, in the region of ${randomElement(settings)}, brave heroes named ${characters.join(", ")} lived.
+One day, unexpectedly, ${randomElement(villains)} appeared.
+Our heroes embarked on a long and adventurous journey to ${randomElement(quests)}.
+Throughout the journey, the challenges they faced brought them closer together and allowed each to discover their unique talents.`;
+      }
+    }
+    // Yardımcı: Rastgele öğe seçme
+    function randomElement(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // Adım 1: Karakter sayısı belirleme
+    nextStepButton.addEventListener("click", function() {
+      playClickSound();
+      let count = parseInt(characterCountInput.value);
+      if (isNaN(count) || count < 1 || count > 5) {
+        alert(languageSelect.value === "tr" ? "Lütfen 1 ile 5 arasında bir sayı giriniz." : "Please enter a number between 1 and 5.");
+        return;
+      }
+      // Karakter isimleri alanlarını oluştur
+      characterInputsDiv.innerHTML = "";
+      for (let i = 0; i < count; i++) {
+        let label = document.createElement("label");
+        label.textContent = texts[languageSelect.value].characterName;
+        let input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = texts[languageSelect.value].characterName;
+        input.required = true;
+        input.classList.add("character-name");
+        characterInputsDiv.appendChild(label);
+        characterInputsDiv.appendChild(input);
+      }
+      step1.style.display = "none";
+      step2.style.display = "block";
+    });
+
+    // Adım 2: Hikayeyi oluştur ve göster (initial story)
+    generateButton.addEventListener("click", function() {
+      playClickSound();
+      let characterInputs = document.querySelectorAll(".character-name");
+      let characters = [];
+      characterInputs.forEach(function(input) {
+        let name = input.value.trim();
+        if (name !== "") {
+          characters.push(name);
+        }
+      });
+      if (characters.length === 0) {
+        alert(languageSelect.value === "tr" ? "Lütfen en az bir karakter ismi giriniz." : "Please enter at least one character name.");
+        return;
+      }
+      const genre = genreSelect.value;
+      const lang = languageSelect.value;
+      let story = generateStory(characters, genre, lang);
+      initialStoryText.textContent = story;
+      step2.style.display = "none";
+      initialStorySection.style.display = "block";
+    });
+
+    // Level kısmını başlat (ilk level)
+    startLevelsButton.addEventListener("click", function() {
+      playClickSound();
+      initialStorySection.style.display = "none";
+      currentLevel = 0;
+      startLevel(currentLevel);
+    });
+
+    // Level Challenge başlatma fonksiyonu
+    function startLevel(levelIndex) {
+      let lang = languageSelect.value;
+      let levelData = levels[levelIndex][lang];
+      levelHeading.textContent = (lang === "tr" ? "Level " : "Level ") + (levelIndex + 1);
+      challengeText.textContent = levelData.challenge;
+      choicesContainer.innerHTML = "";
+      outcomeText.style.display = "none";
+      nextLevelButton.style.display = "none";
+      // Level müziğini ayarla
+      bgMusic.src = levels[levelIndex].music;
+      if (bgMusicPlaying) {
+        bgMusic.play();
+      }
+      // Seçenek butonlarını oluştur
+      levelData.choices.forEach(choice => {
+        let btn = document.createElement("button");
+        btn.textContent = choice.text;
+        btn.addEventListener("click", function() {
+          playClickSound();
+          outcomeText.textContent = choice.outcome;
+          outcomeText.style.display = "block";
+          // Tüm seçim butonlarını devre dışı bırak
+          let btns = choicesContainer.querySelectorAll("button");
+          btns.forEach(b => b.disabled = true);
+          nextLevelButton.style.display = "block";
+        });
+        choicesContainer.appendChild(btn);
+      });
+      levelSection.style.display = "block";
+    }
+
+    // Next Level butonu
+    nextLevelButton.addEventListener("click", function() {
+      playClickSound();
+      // Eğer henüz level varsa ileri git, yoksa final ekranı göster
+      if (currentLevel < levels.length - 1) {
+        currentLevel++;
+        startLevel(currentLevel);
+      } else {
+        levelSection.style.display = "none";
+        showFinalSection();
+      }
+    });
+
+    // Final ekranı göster
+    function showFinalSection() {
+      let lang = languageSelect.value;
+      finalHeading.textContent = texts[lang].final_heading;
+      finalMessage.textContent = texts[lang].final_message;
+      finalSection.style.display = "block";
+      // Dilersen burada final müziğini değiştirebilir veya müziği durdurabilirsin
+      bgMusic.pause();
+    }
+
+    // Oyuna yeniden başlama
+    restartGameButton.addEventListener("click", function() {
+      playClickSound();
+      finalSection.style.display = "none";
+      // Tüm bölümleri sıfırlayarak tekrar başa dönüyoruz
+      step1.style.display = "block";
+      step2.style.display = "none";
+      initialStorySection.style.display = "none";
+      levelSection.style.display = "none";
+      // Temizle
+      characterCountInput.value = 1;
+      characterInputsDiv.innerHTML = "";
+      genreSelect.value = "fantasy";
+      initialStoryText.textContent = "";
+    });
+  </script>
+</body>
+</html>
+
+
